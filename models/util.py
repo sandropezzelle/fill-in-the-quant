@@ -9,7 +9,9 @@
 
 from __future__ import print_function
 from itertools import chain
+import numpy as np
 from gensim.models.keyedvectors import KeyedVectors
+import keras.utils
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 
@@ -82,6 +84,11 @@ def generate_datasets(path, setting, sets, label_list, max_num_words,
 
     texts, labels = read_data_from_txt(path, setting, sets, label_list)
 
+    # convert labels to one_hot
+    labels = {k: keras.utils.to_categorical(
+        labels[k], num_classes=len(label_list))
+        for k in labels}
+
     tokenizer = (Tokenizer(num_words=max_num_words, filters='\t\n') if punct
                  else Tokenizer(num_words=max_num_words))
 
@@ -90,14 +97,45 @@ def generate_datasets(path, setting, sets, label_list, max_num_words,
     all_texts = list(chain(*texts.values()))
 
     tokenizer.fit_on_texts(all_texts)
-    print('Found {} unique tokens.'.format(len(tokenizer.word_index)))
+    word_index = tokenizer.word_index
+    print('Found {} unique tokens.'.format(len(word_index)))
 
     for dataset in texts:
         sequences = tokenizer.texts_to_sequences(texts[dataset])
         texts[dataset] = pad_sequences(sequences,
                                        maxlen=max_seq_len, padding='post')
 
-    return texts, labels
+    return texts, labels, word_index
+
+
+# TODO: document!
+def get_embedding_matrix(embedding_file, word_index, embedding_dim):
+
+    print('loading embeddings...')
+
+    # READ VECTORS FROM TEXT
+    embeddings_index = {}
+    with open(embedding_file, 'r') as f:
+        for line in f:
+            values = line.split()
+            word = values[0]
+            vector = np.asarray(values[1:], dtype='float32')
+            embeddings_index[word] = vector
+
+    # GENERATE EMBEDDING MATRIX
+    count = 0
+    # unfound words will be all zero; random instead?
+    embedding_matrix = np.zeros((len(word_index) + 1, embedding_dim))
+    for word, i in word_index.items():
+        embedding_vector = embeddings_index.get(word)
+        # found in our vectors
+        if embedding_vector is not None:
+            embedding_matrix[i] = embedding_vector
+        else:
+            count += 1
+
+    print('{} tokens not found in vector space.'.format(count))
+    return embedding_matrix
 
 
 # see https://stackoverflow.com/a/33183634

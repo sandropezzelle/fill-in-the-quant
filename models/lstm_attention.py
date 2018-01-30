@@ -47,7 +47,7 @@ def run_trial(params, fixed_params, data_path, embedding_file):
                                                 params['punct'])
 
     embedding_matrix = util.get_embedding_matrix(embedding_file, word_index,
-                                                 fixed_params['embedding_dim'])
+                                                 params['embedding_dim'])
 
     model = build_model(params, embedding_matrix)
 

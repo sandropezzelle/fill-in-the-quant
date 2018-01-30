@@ -39,6 +39,7 @@ import util
 # TODO: command line arguments for path to vectors, path to text data
 def run_trial(params, fixed_params, data_path, embedding_file):
 
+    print(params['setting'])
     Xs, Ys, word_index = util.generate_datasets(data_path, params['setting'],
                                                 ['train', 'test', 'val'],
                                                 fixed_params['quantifiers'],
@@ -318,13 +319,16 @@ if __name__ == '__main__':
     parser.add_argument('--context',
                         help='whether to use AttentionWithContext',
                         action='store_true', default=False)
+    parser.add_argument('--setting',
+                        help='setting for data type',
+                        type=str, default='starget')
     args = parser.parse_args()
 
     # TODO: improve the division of labor between args and params/fixed_params
     # e.g. make everything an arg, with default values?
     params = {
         'punct': True,
-        'setting': util.SettingsValues.starget,
+        'setting': args.setting,
         'max_seq_len': 50,
         'hidden_units': 128,
         'num_classes': 9,

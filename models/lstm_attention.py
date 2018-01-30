@@ -8,6 +8,8 @@
 # --------------------------------------------------------
 
 from __future__ import print_function
+import argparse
+
 import numpy as np
 from keras.models import Sequential
 from keras.layers import Dense, Dropout, Embedding, LSTM
@@ -21,6 +23,18 @@ from keras import regularizers
 
 import util
 
+""" Example usage:
+
+    python lstm_attention.py \
+            --data /path/to/data/ \
+            --vectors /path/to/vectors.txt \
+            --out_path /path/to/output \
+            --context
+
+    If '--context' is omitted, Attention() layer will be used instead of
+    AttentionWithContext.
+"""
+
 
 # TODO: command line arguments for path to vectors, path to text data
 def run_trial(params, fixed_params, data_path, embedding_file):
@@ -32,10 +46,8 @@ def run_trial(params, fixed_params, data_path, embedding_file):
                                                 params['max_seq_len'],
                                                 params['punct'])
 
-    # embedding_matrix = util.get_embedding_matrix(embedding_file, word_index,
-                                                 # fixed_params['embedding_dim'])
-    embedding_matrix = np.zeros((len(word_index) + 1,
-                                 params['embedding_dim']))
+    embedding_matrix = util.get_embedding_matrix(embedding_file, word_index,
+                                                 fixed_params['embedding_dim'])
 
     model = build_model(params, embedding_matrix)
 
@@ -221,6 +233,7 @@ class AttentionWithContext(Layer):
                  W_constraint=None, u_constraint=None, b_constraint=None,
                  bias=True, **kwargs):
 
+        print('With context')
         self.supports_masking = True
         self.init = initializers.get('glorot_uniform')
 
@@ -295,6 +308,20 @@ class AttentionWithContext(Layer):
 
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--vectors', help='file with vector embedding',
+                        type=str, required=True)
+    parser.add_argument('--data', help='path to data files', type=str,
+                        required=True)
+    parser.add_argument('--out_path', help='path to output', type=str,
+                        default='/tmp/')
+    parser.add_argument('--context',
+                        help='whether to use AttentionWithContext',
+                        action='store_true', default=False)
+    args = parser.parse_args()
+
+    # TODO: improve the division of labor between args and params/fixed_params
+    # e.g. make everything an arg, with default values?
     params = {
         'punct': True,
         'setting': util.SettingsValues.starget,
@@ -306,7 +333,7 @@ if __name__ == '__main__':
         'dropout': 1.0,
         'optimizer': 'nadam',
         'embedding_dim': 300,
-        'context': True
+        'context': args.context
     }
 
     fixed_params = {
@@ -317,8 +344,7 @@ if __name__ == '__main__':
         'quantifiers': ['none of ', 'a few of ', 'few of ', 'some of ',
                         'many of ', 'most of ', 'more than half of ',
                         'almost all of ', 'all of '],
-        'output_path': '/tmp/keras'
+        'output_path': args.out_path
     }
 
-    run_trial(params, fixed_params, '../data/',
-              '/Users/shanest/Documents/GoogleNews-vectors-negative300.txt')
+    run_trial(params, fixed_params, args.data, args.vectors)

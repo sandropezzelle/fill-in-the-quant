@@ -8,79 +8,34 @@
 # --------------------------------------------------------
 
 from __future__ import print_function
-import argparse
 
-import numpy as np
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Embedding, LSTM
+from keras.layers import Dense, Dropout, LSTM
 # , Bidirectional, Activation, Input, Flatten
-from keras.callbacks import ModelCheckpoint
 from keras import backend as K
 from keras.engine.topology import Layer
 from keras import constraints
 from keras import initializers
 from keras import regularizers
 
-import util
 
-""" Example usage:
-
-    python lstm_attention.py \
-            --data /path/to/data/ \
-            --vectors /path/to/vectors.txt \
-            --out_path /path/to/output \
-            --context
-
-    If '--context' is omitted, Attention() layer will be used instead of
-    AttentionWithContext.
-"""
+def build_attention_context_model(params):
+    return build_model(params, context=True)
 
 
-# TODO: command line arguments for path to vectors, path to text data
-def run_trial(params, fixed_params, data_path, embedding_file):
-
-    print(params['setting'])
-    Xs, Ys, word_index = util.generate_datasets(data_path, params['setting'],
-                                                ['train', 'test', 'val'],
-                                                fixed_params['quantifiers'],
-                                                fixed_params['max_num_words'],
-                                                params['max_seq_len'],
-                                                params['punct'])
-
-    embedding_matrix = util.get_embedding_matrix(embedding_file, word_index,
-                                                 params['embedding_dim'])
-
-    model = build_model(params, embedding_matrix)
-
-    print('Model built. Time to train!')
-
-    checkpoint = ModelCheckpoint(fixed_params['output_path'],
-                                 monitor='val_loss',
-                                 verbose=1, save_best_only=True, mode='min')
-    callback_list = [checkpoint]
-    # we save the weights of the model for which the validation loss is lowest!
-
-    model.fit(Xs['train'], Ys['train'],
-              batch_size=params['batch_size'],
-              epochs=params['num_epochs'],
-              validation_data=[Xs['val'], Ys['val']],
-              callbacks=callback_list)
+def build_attention_model(params):
+    return build_model(params, context=False)
 
 
-def build_model(params, embedding_matrix):
-
-    embedding_layer = Embedding(len(embedding_matrix),
-                                params['embedding_dim'],
-                                weights=[embedding_matrix],
-                                input_length=params['max_seq_len'],
-                                mask_zero=True,  # MASK the padding!
-                                trainable=False)  # should we try True?
+def build_model(params, context):
 
     model = Sequential()
-    model.add(embedding_layer)
-    model.add(LSTM(params['hidden_units'], return_sequences=True))
+    model.add(LSTM(params['hidden_units'],
+                   input_shape=(params['max_seq_len'],
+                                params['embedding_dim']),
+                   return_sequences=True))
     model.add(Dropout(params['dropout']))
-    if params['context']:
+    if context:
         model.add(AttentionWithContext())
     else:
         model.add(Attention())
@@ -305,50 +260,3 @@ class AttentionWithContext(Layer):
 
     def compute_output_shape(self, input_shape):
         return input_shape[0], input_shape[-1]
-
-
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--vectors', help='file with vector embedding',
-                        type=str, required=True)
-    parser.add_argument('--data', help='path to data files', type=str,
-                        required=True)
-    parser.add_argument('--out_path', help='path to output', type=str,
-                        default='/tmp/')
-    parser.add_argument('--context',
-                        help='whether to use AttentionWithContext',
-                        action='store_true', default=False)
-    parser.add_argument('--setting',
-                        help='setting for data type',
-                        type=str, default='starget')
-    args = parser.parse_args()
-
-    # TODO: improve the division of labor between args and params/fixed_params
-    # e.g. make everything an arg, with default values?
-    params = {
-        'punct': True,
-        'setting': args.setting,
-        'max_seq_len': 50,
-        'hidden_units': 128,
-        'num_classes': 9,
-        'batch_size': 64,
-        'num_epochs': 30,
-        'dropout': 1.0,
-        'optimizer': 'nadam',
-        'embedding_dim': 300,
-        'context': args.context
-    }
-
-    fixed_params = {
-        'model_name': 'lstm-attention{}{}'.format(
-            '-context' if params['context'] else '',
-            '-punct' if params['punct'] else ''),
-        'max_num_words': 50000,
-        'quantifiers': ['none of ', 'a few of ', 'few of ', 'some of ',
-                        'many of ', 'most of ', 'more than half of ',
-                        'almost all of ', 'all of '],
-        'output_path': args.out_path
-    }
-
-    run_trial(params, fixed_params, args.data, args.vectors)

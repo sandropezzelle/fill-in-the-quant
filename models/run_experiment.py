@@ -43,11 +43,9 @@ def run_trial(model_fn, params, fixed_params, data_path, embedding_file):
                                                 params['max_seq_len'],
                                                 params['punct'])
 
-    """
     embedding_matrix = util.get_embedding_matrix(embedding_file, word_index,
                                                  params['embedding_dim'])
-    """
-    embedding_matrix = np.zeros((len(word_index)+1, params['embedding_dim']))
+    # embedding_matrix = np.zeros((len(word_index)+1, params['embedding_dim']))
     embedding_model = Sequential()
     embedding_model.add(Embedding(len(embedding_matrix),
                                   params['embedding_dim'],

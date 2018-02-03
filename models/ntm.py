@@ -273,9 +273,6 @@ class NeuralTuringMachine(Recurrent):
         init_ww = K.variable(init_ww, name="init_weights_write")
         return [init_old_ntm_output, init_M, init_wr, init_ww]
 
-
-
-
     # See chapter 3.1
     def _read_from_memory(self, weights, M):
         # see equation (2)

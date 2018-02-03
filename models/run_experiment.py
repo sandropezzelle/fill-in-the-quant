@@ -43,8 +43,11 @@ def run_trial(model_fn, params, fixed_params, data_path, embedding_file):
                                                 params['max_seq_len'],
                                                 params['punct'])
 
+    """
     embedding_matrix = util.get_embedding_matrix(embedding_file, word_index,
                                                  params['embedding_dim'])
+    """
+    embedding_matrix = np.zeros((len(word_index)+1, params['embedding_dim']))
     embedding_model = Sequential()
     embedding_model.add(Embedding(len(embedding_matrix),
                                   params['embedding_dim'],
@@ -57,13 +60,30 @@ def run_trial(model_fn, params, fixed_params, data_path, embedding_file):
     X_vectors = {k: embedding_model.predict(Xs[k],
                                             batch_size=len(Xs[k])) for k in Xs}
 
+    # NOTE: this is a hack.  The implementation of NTM depends on batch_size;
+    # if that does not evenly divide the size of one epoch, the last batch will
+    # be a different size and break everything.  For now, we make sure that
+    # batch_size evenly divides the size of the training data.  Eventually, we
+    # should fix the NTM.
+    if params['name'] == 'ntm':
+        training_data_size = len(X_vectors['train'])
+        batch_size = params['batch_size']
+        for n in range(batch_size):
+            new_size = batch_size - n
+            if training_data_size % new_size == 0:
+                params['batch_size'] = new_size
+                print('NTM mode, found batch size {}'.format(new_size))
+                break
+
     model = model_fn(params)
 
     print('Model built. Time to train!')
 
     checkpoint = ModelCheckpoint(fixed_params['output_path'],
                                  monitor='val_loss',
-                                 verbose=1, save_best_only=True, mode='min')
+                                 verbose=1,
+                                 save_best_only=True,
+                                 mode='min')
     callback_list = [checkpoint]
     # we save the weights of the model for which the validation loss is lowest!
 
@@ -101,7 +121,7 @@ if __name__ == '__main__':
     shared_params = {
         'punct': True,
         'setting': args.setting,
-        'max_seq_len': 50,
+        'max_seq_len': (50 if args.setting == 'starget' else 150),
         'num_classes': 9,
         'batch_size': 64,
         'num_epochs': 30,

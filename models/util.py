@@ -138,6 +138,20 @@ def get_embedding_matrix(embedding_file, word_index, embedding_dim):
     return embedding_matrix
 
 
+def merge_dicts(*dicts):
+    """Merges any number of dictionaries into one.
+
+    Args:
+        *dicts: some dictionaries
+
+    Returns:
+        a dictionary, containing all the k, v pairs from *dicts
+    """
+    merged = {}
+    for dictionary in dicts:
+        merged.update(dictionary)
+    return merged
+
 # see https://stackoverflow.com/a/33183634
 def word2vec_bin_to_txt(in_file, out_file):
     model = KeyedVectors.load_word2vec_format(in_file, binary=True)

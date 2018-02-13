@@ -85,6 +85,7 @@ def run_trial(model_fn, params, fixed_params, data_path, embedding_file):
 
     model.fit(X_vectors['train'],  # Xs['train'],
               Ys['train'],
+              shuffle=True,
               batch_size=params['batch_size'],
               epochs=params['num_epochs'],
               validation_data=[X_vectors['val'], Ys['val']],

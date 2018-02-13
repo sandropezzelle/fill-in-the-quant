@@ -120,6 +120,8 @@ if __name__ == '__main__':
                         type=int, default=128)
     parser.add_argument('--dropout', help='amount of dropout',
                         type=float, default=0.25)
+    parser.add_argument('--optimizer', help='which optimizer to use',
+                        type=str, default='nadam')
     args = parser.parse_args()
 
     # TODO: improve the division of labor between args and params/fixed_params
@@ -131,7 +133,7 @@ if __name__ == '__main__':
         'num_classes': 9,
         'batch_size': args.batch_size,
         'num_epochs': 30,
-        'optimizer': 'nadam',
+        'optimizer': args.optimizer,
         'embedding_dim': 300
     }
 

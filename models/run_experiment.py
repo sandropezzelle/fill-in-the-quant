@@ -93,8 +93,9 @@ def run_trial(model_fn, params, fixed_params, data_path, embedding_file):
 
     print('Training done. Evaluating best model on test set.')
     model.load_weights(fixed_params['output_path'])
+    # need to feed proper batch size even for evaluation of NTM
     evaluation = model.evaluate(X_vectors['test'], Ys['test'],
-                                batch_size=len(X_vectors['test']))
+                                batch_size=params['batch_size'])
     print(evaluation)
 
 

@@ -159,7 +159,7 @@ if __name__ == '__main__':
         'write_heads': 1,
         'shift_range': 3,
         'activation': 'softmax',  # for classification
-        'hidden_units': args.hidden_units
+        'hidden_units': args.hidden_units,
         'controller': 'ffnn'
     }
 

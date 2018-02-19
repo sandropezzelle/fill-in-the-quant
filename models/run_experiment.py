@@ -107,8 +107,9 @@ def run_trial(model_fn, params, fixed_params, data_path, embedding_file,
                                     batch_size=params['batch_size'])
         print(evaluation)
         print('Confusion matrix.')
-        y_pred = model.predict(X_vectors[dataset])
-        print(confusion_matrix(y_pred, Ys[dataset]))
+        y_pred = model.predict_classes(X_vectors[dataset])
+        y_true = np.argmax(Ys[dataset], axis=1)
+        print(confusion_matrix(y_pred, y_true))
 
 
 if __name__ == '__main__':
@@ -137,7 +138,7 @@ if __name__ == '__main__':
     parser.add_argument('--optimizer', help='which optimizer to use',
                         type=str, default='nadam')
     parser.add_argument('--eval', help='evaluate a model instead of train',
-                        type=bool, default=False, action='store_true')
+                        default=False, action='store_true')
     args = parser.parse_args()
 
     # TODO: improve the division of labor between args and params/fixed_params

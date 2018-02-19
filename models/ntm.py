@@ -46,15 +46,18 @@ def build_ntm_model(params):
         params['write_heads'])
     controller_model = Sequential()
     if params['controller'] == 'ffnn':
+        controller_model.add(Dense(units=params['hidden_units'],
+                                   input_dim=controller_input,
+                                   activation='tanh'))
         controller_model.add(Dense(units=controller_output,
-                                   input_dim=controller_input))
+                                   activation='softmax'))
     else:
         raise ValueError("Currently, only ffnn is valid controller for NTM")
     # TODO: understand this compile better
     controller_model.compile(loss='categorical_crossentropy',
                              optimizer=params['optimizer'],
-                             metrics=['accuracy'],
-                             sample_weight_mode='temporal')
+                             metrics=['accuracy'])
+                             # sample_weight_mode='temporal')
 
     # NTM
     ntm = NeuralTuringMachine(params['num_classes'],

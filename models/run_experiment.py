@@ -21,14 +21,11 @@ from ntm import build_ntm_model
 
 """ Example usage:
 
-    python lstm_attention.py \
-            --model ntm \
+    python run_experiment.py \
+            --model att \
             --data /path/to/data/ \
             --vectors /path/to/vectors.txt \
             --out_path /path/to/output
-
-    If '--context' is omitted, Attention() layer will be used instead of
-    AttentionWithContext.
 """
 
 
@@ -88,15 +85,24 @@ def run_trial(model_fn, params, fixed_params, data_path, embedding_file):
 
     model.fit(X_vectors['train'],  # Xs['train'],
               Ys['train'],
+              shuffle=True,
               batch_size=params['batch_size'],
               epochs=params['num_epochs'],
               validation_data=[X_vectors['val'], Ys['val']],
               callbacks=callback_list)
 
+    print('Training done. Evaluating best model on test set.')
+    model.load_weights(fixed_params['output_path'])
+    # need to feed proper batch size even for evaluation of NTM
+    evaluation = model.evaluate(X_vectors['test'], Ys['test'],
+                                batch_size=params['batch_size'])
+    print(evaluation)
+
 
 if __name__ == '__main__':
 
     # TODO: check for correct arguments, e.g. for attention vs ntm
+    # TODO: optimizer as arg?
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--model', help='name of model function',
@@ -107,12 +113,17 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument('--out_path', help='path to output', type=str,
                         default='/tmp/')
-    parser.add_argument('--context',
-                        help='whether to use AttentionWithContext',
-                        action='store_true', default=False)
     parser.add_argument('--setting',
                         help='setting for data type',
                         type=str, default='starget')
+    parser.add_argument('--batch_size', help='size of each batch',
+                        type=int, default=64)
+    parser.add_argument('--hidden_units', help='size of hidden layer in LSTM',
+                        type=int, default=128)
+    parser.add_argument('--dropout', help='amount of dropout',
+                        type=float, default=0.25)
+    parser.add_argument('--optimizer', help='which optimizer to use',
+                        type=str, default='nadam')
     args = parser.parse_args()
 
     # TODO: improve the division of labor between args and params/fixed_params
@@ -122,22 +133,22 @@ if __name__ == '__main__':
         'setting': args.setting,
         'max_seq_len': (50 if args.setting == 'starget' else 150),
         'num_classes': 9,
-        'batch_size': 64,
+        'batch_size': args.batch_size,
         'num_epochs': 30,
-        'optimizer': 'nadam',
+        'optimizer': args.optimizer,
         'embedding_dim': 300
     }
 
     attention_params = {
         'name': 'lstm-attention',
-        'hidden_units': 128,
-        'dropout': 0.25,
+        'hidden_units': args.hidden_units,
+        'dropout': args.dropout,
     }
 
     attention_context_params = {
         'name': 'lstm-attention-context',
-        'hidden_units': 128,
-        'dropout': 0.25,
+        'hidden_units': args.hidden_units,
+        'dropout': args.dropout,
     }
 
     ntm_params = {
@@ -148,11 +159,14 @@ if __name__ == '__main__':
         'write_heads': 1,
         'shift_range': 3,
         'activation': 'softmax',  # for classification
+        'hidden_units': args.hidden_units,
         'controller': 'ffnn'
     }
 
-    if args.model == 'att' or args.model == 'att_con':
+    if args.model == 'att':
         params = util.merge_dicts(shared_params, attention_params)
+    elif args.model == 'att_con':
+        params = util.merge_dicts(shared_params, attention_context_params)
     elif args.model == 'ntm':
         params = util.merge_dicts(shared_params, ntm_params)
     else:

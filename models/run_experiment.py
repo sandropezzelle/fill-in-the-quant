@@ -136,6 +136,8 @@ if __name__ == '__main__':
                         type=float, default=0.25)
     parser.add_argument('--optimizer', help='which optimizer to use',
                         type=str, default='nadam')
+    parser.add_argument('--eval', help='evaluate a model instead of train',
+                        type=bool, default=False, action='store_true')
     args = parser.parse_args()
 
     # TODO: improve the division of labor between args and params/fixed_params
@@ -202,4 +204,5 @@ if __name__ == '__main__':
     }
     model_fn = model_fn_dict[args.model]
 
-    run_trial(model_fn, params, fixed_params, args.data, args.vectors)
+    run_trial(model_fn, params, fixed_params, args.data, args.vectors,
+              not args.eval)

@@ -11,6 +11,8 @@ from __future__ import print_function
 import argparse
 
 import numpy as np
+import sklearn
+from sklearn.metrics import confusion_matrix
 from keras.models import Sequential
 from keras.layers import Embedding
 from keras.callbacks import ModelCheckpoint
@@ -30,7 +32,8 @@ from ntm import build_ntm_model
 
 
 # TODO: command line arguments for path to vectors, path to text data
-def run_trial(model_fn, params, fixed_params, data_path, embedding_file):
+def run_trial(model_fn, params, fixed_params, data_path, embedding_file,
+              train=True):
 
     print(params['setting'])
     Xs, Ys, word_index = util.generate_datasets(data_path, params['setting'],
@@ -73,30 +76,40 @@ def run_trial(model_fn, params, fixed_params, data_path, embedding_file):
 
     model = model_fn(params)
 
-    print('Model built. Time to train!')
+    print('Model built.')
 
-    checkpoint = ModelCheckpoint(fixed_params['output_path'],
-                                 monitor='val_loss',
-                                 verbose=1,
-                                 save_best_only=True,
-                                 mode='min')
-    callback_list = [checkpoint]
-    # we save the weights of the model for which the validation loss is lowest!
+    if train:
+        print('Time to train!')
 
-    model.fit(X_vectors['train'],  # Xs['train'],
-              Ys['train'],
-              shuffle=True,
-              batch_size=params['batch_size'],
-              epochs=params['num_epochs'],
-              validation_data=[X_vectors['val'], Ys['val']],
-              callbacks=callback_list)
+        checkpoint = ModelCheckpoint(fixed_params['output_path'],
+                                     monitor='val_loss',
+                                     verbose=1,
+                                     save_best_only=True,
+                                     mode='min')
+        callback_list = [checkpoint]
+        # we save the weights of the model for which the validation loss is lowest!
 
-    print('Training done. Evaluating best model on test set.')
+        model.fit(X_vectors['train'],  # Xs['train'],
+                  Ys['train'],
+                  shuffle=True,
+                  batch_size=params['batch_size'],
+                  epochs=params['num_epochs'],
+                  validation_data=[X_vectors['val'], Ys['val']],
+                  callbacks=callback_list)
+        print('Training done.')
+
+    print('Evaluating best model.')
     model.load_weights(fixed_params['output_path'])
     # need to feed proper batch size even for evaluation of NTM
-    evaluation = model.evaluate(X_vectors['test'], Ys['test'],
-                                batch_size=params['batch_size'])
-    print(evaluation)
+    for dataset in ['test', 'val']:
+        print(dataset)
+        evaluation = model.evaluate(X_vectors[dataset], Ys[dataset],
+                                    batch_size=params['batch_size'])
+        print(evaluation)
+        print('Confusion matrix.')
+        y_pred = model.predict_classes(X_vectors[dataset])
+        y_true = np.argmax(Ys[dataset], axis=1)
+        print(confusion_matrix(y_pred, y_true))
 
 
 if __name__ == '__main__':
@@ -124,6 +137,8 @@ if __name__ == '__main__':
                         type=float, default=0.25)
     parser.add_argument('--optimizer', help='which optimizer to use',
                         type=str, default='nadam')
+    parser.add_argument('--eval', help='evaluate a model instead of train',
+                        default=False, action='store_true')
     args = parser.parse_args()
 
     # TODO: improve the division of labor between args and params/fixed_params
@@ -190,4 +205,5 @@ if __name__ == '__main__':
     }
     model_fn = model_fn_dict[args.model]
 
-    run_trial(model_fn, params, fixed_params, args.data, args.vectors)
+    run_trial(model_fn, params, fixed_params, args.data, args.vectors,
+              not args.eval)

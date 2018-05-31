@@ -28,10 +28,18 @@ from ntm import build_ntm_model
             --data /path/to/data/ \
             --vectors /path/to/vectors.txt \
             --out_path /path/to/output
+
+    To evaluate a model, pass the flag
+            --eval
+    And make the command-line flags
+            --dropout
+            --optimizer
+            --hidden_units
+    all equal to the values in the model you want to evaluate.
+    It's assumed that a .model file is stored in --out_path.
 """
 
 
-# TODO: command line arguments for path to vectors, path to text data
 def run_trial(model_fn, params, fixed_params, data_path, embedding_file,
               train=True):
 
@@ -79,6 +87,7 @@ def run_trial(model_fn, params, fixed_params, data_path, embedding_file,
     print('Model built.')
 
     if train:
+        # not eval
         print('Time to train!')
 
         checkpoint = ModelCheckpoint(fixed_params['output_path'],
